@@ -13,25 +13,28 @@ def main(hparams):
     model = Unet(hparams)
 
     os.makedirs(hparams.log_dir, exist_ok=True)
+    print(hparams.log_dir)
     try:
         log_dir = sorted(os.listdir(hparams.log_dir))[-1]
     except IndexError:
         log_dir = os.path.join(hparams.log_dir, 'version_0')
     checkpoint_callback = ModelCheckpoint(
-        filepath=os.path.join(log_dir, 'checkpoints'),
-        save_best_only=False,
+        monitor='val_loss', 
+        mode='min',
+        dirpath=os.path.join(log_dir, 'weighted_entropy'),
+        save_top_k=1, 
         verbose=True,
     )
     stop_callback = EarlyStopping(
         monitor='val_loss',
-        mode='auto',
-        patience=5,
+        mode='min',
+        patience=10,
         verbose=True,
     )
     trainer = Trainer(
-        gpus=1,
-        checkpoint_callback=checkpoint_callback,
-        early_stop_callback=stop_callback,
+        accelerator='gpu', 
+        log_every_n_steps=40, 
+        callbacks=[stop_callback, checkpoint_callback]
     )
 
     trainer.fit(model)
